@@ -8,14 +8,20 @@ import com.glodblock.github.appflux.util.AFUtil;
 import net.neoforged.neoforge.energy.IEnergyStorage;
 
 @SuppressWarnings("UnstableApiUsage")
-public record FEGenericStackInvStorage(GenericInternalInventory inv) implements IEnergyStorage {
+public class FEGenericStackInvStorage implements IEnergyStorage {
+
+    private final GenericInternalInventory inv;
+
+    public FEGenericStackInvStorage(GenericInternalInventory inv) {
+        this.inv = inv;
+    }
 
     @Override
     public int receiveEnergy(int maxReceive, boolean simulate) {
         long inserted = 0;
         long left = maxReceive;
         var mode = Actionable.ofSimulate(simulate);
-        for (int slot = 0; slot < this.inv.size(); slot++) {
+        for (int slot = 0; slot < this.inv.size(); slot ++) {
             var in = this.inv.insert(slot, FluxKey.of(EnergyType.FE), left, mode);
             inserted += in;
             left -= in;
@@ -31,7 +37,7 @@ public record FEGenericStackInvStorage(GenericInternalInventory inv) implements 
         long extracted = 0;
         long left = maxExtract;
         var mode = Actionable.ofSimulate(simulate);
-        for (int slot = 0; slot < this.inv.size(); slot++) {
+        for (int slot = 0; slot < this.inv.size(); slot ++) {
             var out = this.inv.extract(slot, FluxKey.of(EnergyType.FE), left, mode);
             extracted += out;
             left -= out;
@@ -45,7 +51,7 @@ public record FEGenericStackInvStorage(GenericInternalInventory inv) implements 
     @Override
     public int getEnergyStored() {
         long cnt = 0;
-        for (int slot = 0; slot < this.inv.size(); slot++) {
+        for (int slot = 0; slot < this.inv.size(); slot ++) {
             var stack = this.inv.getStack(slot);
             if (stack != null) {
                 if (FluxKey.of(EnergyType.FE).equals(stack.what())) {
@@ -62,14 +68,14 @@ public record FEGenericStackInvStorage(GenericInternalInventory inv) implements 
     @Override
     public int getMaxEnergyStored() {
         long cnt = 0;
-        for (int slot = 0; slot < this.inv.size(); slot++) {
+        for (int slot = 0; slot < this.inv.size(); slot ++) {
             var stack = this.inv.getStack(slot);
             if (stack != null) {
                 if (FluxKey.of(EnergyType.FE).equals(stack.what())) {
-                    cnt++;
+                    cnt ++;
                 }
             } else {
-                cnt++;
+                cnt ++;
             }
         }
         return AFUtil.clampLong(cnt * this.inv.getMaxAmount(FluxKey.of(EnergyType.FE)));

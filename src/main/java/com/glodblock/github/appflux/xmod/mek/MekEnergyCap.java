@@ -3,11 +3,9 @@ package com.glodblock.github.appflux.xmod.mek;
 import appeng.api.config.Actionable;
 import appeng.api.networking.security.IActionSource;
 import appeng.api.networking.storage.IStorageService;
-import com.glodblock.github.appflux.api.EnergyIO;
 import com.glodblock.github.appflux.common.me.key.FluxKey;
 import com.glodblock.github.appflux.common.me.key.type.EnergyType;
 import com.glodblock.github.appflux.config.AFConfig;
-import com.glodblock.github.appflux.util.IOSignal;
 import mekanism.api.Action;
 import mekanism.api.annotations.NothingNullByDefault;
 import mekanism.api.energy.IStrictEnergyHandler;
@@ -17,20 +15,21 @@ import mekanism.common.util.UnitDisplayUtils;
 import net.minecraft.core.Direction;
 import net.neoforged.neoforge.capabilities.BlockCapability;
 import net.neoforged.neoforge.energy.EnergyStorage;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.function.Supplier;
-
 @NothingNullByDefault
-public record MekEnergyCap(IStorageService storage, IActionSource source, IOSignal signal) implements IStrictEnergyHandler {
+public class MekEnergyCap implements IStrictEnergyHandler {
 
+    private final IStorageService storage;
+    private final IActionSource source;
     public static final BlockCapability<IStrictEnergyHandler, Direction> CAP = Capabilities.STRICT_ENERGY.block();
 
-    public static IStrictEnergyHandler of(@Nullable IStorageService storage, IActionSource source, Supplier<EnergyIO> config) {
+    public static IStrictEnergyHandler of(@Nullable IStorageService storage, IActionSource source) {
         if (storage == null) {
             return new ForgeStrictEnergyHandler(new EnergyStorage(0));
         } else {
-            return new MekEnergyCap(storage, source, IOSignal.of(config));
+            return new MekEnergyCap(storage, source);
         }
     }
 
@@ -53,6 +52,11 @@ public record MekEnergyCap(IStorageService storage, IActionSource source, IOSign
             }
         }
         return 0;
+    }
+
+    private MekEnergyCap(IStorageService storage, IActionSource source) {
+        this.storage = storage;
+        this.source = source;
     }
 
     @Override
@@ -91,8 +95,8 @@ public record MekEnergyCap(IStorageService storage, IActionSource source, IOSign
     }
 
     @Override
-    public long insertEnergy(int container, long amount, Action action) {
-        if (container == 0 && this.signal.isInput()) {
+    public long insertEnergy(int container, long amount, @NotNull Action action) {
+        if (container == 0) {
             return this.insertEnergy(amount, action);
         }
         return amount;
@@ -100,22 +104,19 @@ public record MekEnergyCap(IStorageService storage, IActionSource source, IOSign
 
     @Override
     public long insertEnergy(long amount, Action action) {
-        if (this.signal.isInput()) {
-            long toInsert = UnitDisplayUtils.EnergyUnit.FORGE_ENERGY.convertTo(amount);
-            if (toInsert > 0L) {
-                long inserted = this.storage.getInventory().insert(FluxKey.of(EnergyType.FE), toInsert, Actionable.ofSimulate(action.simulate()), this.source);
-                if (inserted > 0L) {
-                    return amount - UnitDisplayUtils.EnergyUnit.FORGE_ENERGY.convertFrom(inserted);
-                }
+        long toInsert = UnitDisplayUtils.EnergyUnit.FORGE_ENERGY.convertTo(amount);
+        if (toInsert > 0L) {
+            long inserted = this.storage.getInventory().insert(FluxKey.of(EnergyType.FE), toInsert, Actionable.ofSimulate(action.simulate()), this.source);
+            if (inserted > 0L) {
+                return amount - UnitDisplayUtils.EnergyUnit.FORGE_ENERGY.convertFrom(inserted);
             }
-            return amount;
         }
         return amount;
     }
 
     @Override
-    public long extractEnergy(int container, long amount, Action action) {
-        if (container == 0 && this.signal.isOutput()) {
+    public long extractEnergy(int container, long amount, @NotNull Action action) {
+        if (container == 0) {
             return this.extractEnergy(amount, action);
         }
         return 0;
@@ -123,13 +124,10 @@ public record MekEnergyCap(IStorageService storage, IActionSource source, IOSign
 
     @Override
     public long extractEnergy(long amount, Action action) {
-        if (this.signal.isOutput()) {
-            long toExtract = UnitDisplayUtils.EnergyUnit.FORGE_ENERGY.convertTo(amount);
-            if (toExtract > 0L) {
-                long extracted = this.storage.getInventory().extract(FluxKey.of(EnergyType.FE), toExtract, Actionable.ofSimulate(action.simulate()), this.source);
-                return UnitDisplayUtils.EnergyUnit.FORGE_ENERGY.convertFrom(extracted);
-            }
-            return 0;
+        long toExtract = UnitDisplayUtils.EnergyUnit.FORGE_ENERGY.convertTo(amount);
+        if (toExtract > 0L) {
+            long extracted = this.storage.getInventory().extract(FluxKey.of(EnergyType.FE), toExtract, Actionable.ofSimulate(action.simulate()), this.source);
+            return UnitDisplayUtils.EnergyUnit.FORGE_ENERGY.convertFrom(extracted);
         }
         return 0;
     }
